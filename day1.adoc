@@ -1,0 +1,47 @@
+= Day 1: Chronal Calibration
+
+== Part 1
+
+> a sequence of changes in frequency (your puzzle input). A value like +6 means the current frequency increases by 6; a value like -3 means the current frequency decreases by 3.
+
+> Starting with a frequency of zero, what is the resulting frequency after all of the changes in frequency have been applied?
+
+A simple reduce over input
+
+== Part 2
+
+> the device repeats the same frequency change list over and over. find the first frequency it reaches twice. Note that your device might need to repeat its list of frequency changes many times
+
+Use reduce to build a lazy sequence of seen frequencies, then reduced when if finds a dupe.
+
+[source,clojure]
+----
+(defn find-repeat [xs]
+  (reduce (fn [seen new]
+            (let [new-acc (+ new (first seen))]
+              (if ((set seen) new-acc)
+                (reduced new-acc)
+                (conj seen new-acc))))
+          '(0)
+          (cycle xs)))
+----
+
+OK, Much too slow. For sure it's that `(set seen)` being called on every iteration which is causing the issue.
+
+Instead I'll store the set _as_ a set, and the accumulator separately.
+
+[source,clojure]
+----
+(defn find-repeat [xs]
+  (reduce (fn [{:keys [seen acc] :as A} new]
+            (let [new-acc (+ new acc)]
+              (if (seen new-acc)
+                (reduced new-acc)
+                (-> A (update :seen conj new-acc)
+                    (assoc :acc new-acc)))))
+          {:seen #{0}
+           :acc 0}
+          (cycle xs)))
+----
+
+116ms to the answer, much better.

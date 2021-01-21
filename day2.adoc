@@ -1,0 +1,51 @@
+= Day 2: Inventory Management System
+
+== Part 1
+
+> They'd be stored together, so the box IDs should be similar
+
+> number that have an ID containing exactly two of any letter and then separately counting those with exactly three of any letter. You can multiply those two counts together to get a rudimentary checksum and compare it to what your device predicts.
+
+> What is the checksum for your list of box IDs?
+
+For a given id, we'll do a frequency over the characters.
+
+We want a function that will take a number and return true if there are any letter which occur that number of times.
+
+(we could optimise and run over the seq once, but won't do that unless we have to, feels like the sort of thing that could tie our hands in part 2)
+
+(Narrator: It didn't)
+
+[source,clojure]
+----
+(defn contains-letter-n-times [n]
+  (fn [id]
+    ((set (vals (frequencies id))) n)))
+
+(* (count (filter (contains-letter-n-times 2) input))
+   (count (filter (contains-letter-n-times 3) input)))
+----
+
+== Part 2
+
+> The boxes will have IDs which differ by exactly one character at the same position in both strings.
+
+Don't know how to do this in a not n^2 way. Given there are 250 inputs, i.e. max checks of ~63k, shouldn't be an issue.
+
+Good for loop with while case for early termination I think. Will also need a 'distance' function.
+
+Actually, a 'letters-in-common' turned out to be more helpful.
+
+[source,clojure]
+----
+(defn letters-in-common [s1 s2]
+  (remove nil? (map #(when (= %1 %2) %1) s1 s2)))
+
+(apply str (first (for [s1 input
+                        s2 input
+                        :let [lic (letters-in-common s1 s2)]
+                        :when (= (dec (count s1)) (count lic))]
+                    lic)))
+----
+
+Wasteful, since it does every calc twice. Need a pattern for doing those 'double diminishing loops'. Maybe something in the combinations library would help. But not doing it now.

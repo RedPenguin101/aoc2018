@@ -1,0 +1,111 @@
+= Day 3: No matter how you slice it
+
+> The whole piece of fabric they're working on is a very large square - at least 1000 inches on each side. Each Elf has made a claim about which area of fabric would be ideal
+
+Each claim's rectangle is defined as follows:
+
+1. The number of inches between the left edge of the fabric and the left edge of the rectangle.
+2. The number of inches between the top edge of the fabric and the top edge of the rectangle.
+3. The width of the rectangle in inches.
+4. The height of the rectangle in inches.
+
+`#{id} @ {1},{2}: {3}x{4}`
+
+> many of the claims overlap. How many *square inches* of fabric are within two or more claims?
+
+OK, figure out that double loop thing, since it's here again.
+
+I think I need combinations
+----
+; COMBINATIONS
+; all the unique ways of taking t different elements from items
+(combo/combinations [1 2 3] 2)
+;;=> ((1 2) (1 3) (2 3))
+----
+
+Then just check if they overlap.
+
+So I need an `(overlap a b)`. Then pretty simple filter.
+
+How to make an overlap function? Easiest way is just to get the coordinates set each claim covers, then find if there's an intersection. Let's do that.
+
+Hold on, read the requirements again. I need the *square inches* that are within two or more claims. I thought it was number of claims that overlapped. RTFQ.
+
+That's tricker. I think the best think here is to stick with the coordinates thing, and just feed them all into a seq, then do frequencies, then disregard any with frequency 1. The count all the values.
+
+That was pretty smooth. Simple regex to get the coords. Not very fast though, about 2.5s. Lots of expensive concats. Maybe a mapcat would be faster?...
+
+Much faster, < 0.5s. Yay
+
+[source,clojure]
+----
+
+(defn claim->coords [claim]
+  (let [[_id x y x-size y-size] (map #(Long/parseLong %) (rest (re-matches #"#(\d+) @ (\d+),(\d+): (\d+)x(\d+)" claim)))]
+    (for [x' (range x-size)
+          y' (range y-size)]
+      [(+ x x') (+ y y')])))
+
+
+(time (->> input
+           (mapcat claim->coords)
+           (frequencies)
+           (filter (comp #(> % 1) second))
+           (count)))
+----
+
+== Part 2
+
+> you notice that exactly one claim doesn't overlap by even a single square inch of fabric with any other claim. What is it's ID?
+
+Great, back to the overlap idea. There are 1233 claims, which means (1233 choose 2) 759528 combinations. Which is quite a lot, but maybe not prohibitively.
+
+Let's try anyways.
+
+Oh, will also need to change claims to include the id. Should've done that in the first place, lazy.
+
+So we'll do it like this: 
+
+. Start with a full set of ids. This will be our accumlator
+. For each claim combination, 
+.. if either of the ids are not in the accumluator, ignore the combo
+.. test to see if there's an overlap
+.. if not, do nothing
+.. if yes, remove both ids from the pool
+
+[source,clojure]
+----
+(defn overlap? [a b]
+  (not-empty (set/intersection (set a) (set b))))
+
+(time (let [claims (into {} (map claim->coords input))]
+           (reduce (fn [A [[id1 coords1] [id2 coords2]]]
+                     (cond (not (or (contains? A id1) (contains? A id2)))
+                           A
+
+                           (overlap? coords1 coords2)
+                           (disj A id1 id2)
+
+                           :else A))
+                   (set (keys claims))
+                   (combinations claims 2))))
+----
+
+OK, that took 77 seconds. Too long. How can we make that faster?
+
+Slept on it, think I have it. The claim with no overlaps will be the only one who's coordinates are a subset of all coordinates with frequency 1, which we have from the last part.
+
+[source,clojure]
+----
+(time 
+   (let [ones (->> input
+                   (mapcat (comp second claim->coords))
+                   (frequencies)
+                   (filter (comp #(= % 1) second))
+                   (map first)
+                   set)]
+     (some #(when (set/subset? (set (second %)) ones)
+              (first %)) (map claim->coords input))))
+----
+
+0.6s
