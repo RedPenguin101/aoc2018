@@ -1,0 +1,72 @@
+= Day 4: Repose Record
+
+record:
+
+----
+[1518-11-01 00:00] Guard #10 begins shift`
+[1518-11-01 00:05] falls asleep
+[1518-11-01 00:25] wakes up
+----
+
+> Find the guard that has the most minutes asleep. What minute does that guard spend asleep the most?
+
+So first, I think you can just sort the entries alphabetically, because of the format the dates are in.
+
+Then you can divide the sequence into 'shifts', starting when a new guard comes on. `partition-by`? Can never remember which function does that.
+
+Then for each block, you can count how many minutes were spent asleep. `time-asleep -> [guard-id mins]`
+
+Finally, reduce-kv with + and get the guard that spent the most time asleep.
+
+Let's go!
+
+[source,clojure]
+----
+(defn shifts [records]
+  (->> records
+       (partition-by #(= "Guard" (subs % 19 24)))
+       (partition 2)
+       (map #(mapcat concat %))))
+
+(first (shifts sample-records))
+;; => ("[1518-02-24 23:58] Guard #2347 begins shift" 
+;;     "[1518-02-25 00:27] falls asleep" 
+;;     "[1518-02-25 00:58] wakes up")
+----
+
+Hideous function, but whatever.
+
+A problem here is that you don't know what time the shift ends, so you can't get the _full_ length of the shift. It's not a problem for this part _if_ the guard is always awake when the next guard arrives (And I checked - they are). But might be sensible to make sure we can know when a shift ends, possibly will come in handy in the next part and would require rewrite.
+
+We can actually do that with a single character change:
+
+[source,clojure]
+----
+(defn shifts [records]
+  (->> records
+       (partition-by #(= "Guard" (subs % 19 24)))
+       (partition 3 2) ;; change here
+       (map #(mapcat concat %))))
+
+(first (shifts sample-records))
+;; => ("[1518-02-24 23:58] Guard #2347 begins shift"
+;;     "[1518-02-25 00:27] falls asleep"
+;;     "[1518-02-25 00:58] wakes up"
+;;     "[1518-02-25 23:53] Guard #211 begins shift")
+----
+
+Now we have the full thing.
+
+OK, now we need to do date parsing to get some summary of the shift. No way I'm writing a date parser, so we'll use Juxt's https://github.com/juxt/tick[tick] library. Which I'll have to relearn how to use.
+
+So I went away and coded a bunch. Turns out I missed a small detail in the question.
+
+> Strategy 1: Find the guard that has the most minutes asleep. *What minute does that guard spend asleep the most?*
+
+Didn't read that last bit :(. It invalidates my approach of just finding the total time awake and time asleep. Will need to think about it a bit. I did find the guard who slept the most: 661.
+
+The shifts last just under either 1 day or 2 days. None of the sleeps last more than 1 hour in total. It doesn't look like any of the sleeps cross the hour, i.e. they can be determined with reference to the minutes only.
+
+That means, to a sequence of the minutes of nap, you can just do `(range start end)`. Then count them to see the most, and freq on them to see the most common.
+
+Let's try that.
