@@ -54,4 +54,20 @@
   (def rules (into {} (map ->rule rules))))
 
 (comment
-  (time (score (last (take 21 (iterate (partial step rules) pots))))))
+  (time (score (last (take 10001 (iterate (partial step rules) pots)))))
+
+  (map score (take 300 (iterate (partial step rules) pots)))
+  (score (last (take 150 (iterate (partial step rules) pots))))
+  ;; => 12653
+  (score (last (take 151 (iterate (partial step rules) pots))))
+  ;; => 12726
+  (- 12726 12653)
+  (- (score (last (take 156 (iterate (partial step rules) pots))))
+     (score (last (take 157 (iterate (partial step rules) pots)))))
+
+  (+ (* 73 (- 157 150)) 12653)
+  (+ (* 73 (- 50000000001 150)) 12653)
+  ;; => 3650000001776
+
+
+  1)
