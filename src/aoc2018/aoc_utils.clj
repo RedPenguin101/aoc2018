@@ -9,7 +9,7 @@
   (mapv #(Long/parseLong %) (re-seq #"\d+" str)))
 
 (defn get-input
-  ([day] (get-input day str/trim))
+  ([day] (get-input day identity))
   ([day parser]
    (map parser (str/split-lines (slurp (input-template day))))))
 
