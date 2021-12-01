@@ -2,12 +2,14 @@
   (:require [clojure.test :refer [deftest is testing]]
             [clojure.string :as str]
             [clojure.set :as set]
-            [taoensso.tufte :as tufte :refer [p profiled profile]]))
+            [taoensso.tufte :as tufte :refer [p profile]]))
+
+(tufte/add-basic-println-handler! {})
+
 
 ;; helpers and debug
 
-(defn- read-order [[x y]] [y x])
-
+(defn- read-order [[x y]] (p :read-order [y x]))
 
 (defn- tap>> [note x]
   (tap> [note x])
@@ -214,8 +216,8 @@
 (defn- neigbours
   "Returns the squares directly up, down, left and right of the input sqaure"
   [[x y]]
-  #{[(inc x) y] [(dec x) y]
-    [x (inc y)] [x (dec y)]})
+  (p :neighbours #{[(inc x) y] [(dec x) y]
+                   [x (inc y)] [x (dec y)]}))
 
 (defn- open-coords
   "Returns all currently empty squares in the state"
@@ -245,6 +247,9 @@
                   (conj explored this)
                   goal)))))
 
+(defn shortest-path-wrap [open from to]
+  (p :shortest-path (shortest-path open from to)))
+
 ;; level 2: State and paths
 
 (def enemy-of {:goblin :elf :elf :goblin})
@@ -266,19 +271,19 @@
   "Returns all the spaces where the unit at input coord will be in range of an enemy unit
    (there may or may not be a valid path to the square)"
   [state coord]
-  (mapcat #(open-adjacent-squares
-            (spaces-containing state #{:empty}) %)
-          (spaces-containing state #{(enemy-of (first (state coord)))})))
+  (p :attack-squares (mapcat #(open-adjacent-squares
+                               (spaces-containing state #{:empty}) %)
+                             (spaces-containing state #{(enemy-of (first (state coord)))}))))
 
 (defn- path-to-closest-attack-square
   [state coord]
-  (if (or (nil? (state coord)) (= [:empty] (state coord)))
-    (throw (ex-info "Can't be called on an empty square" {:state state :coord coord}))
-    (->> (attack-squares state coord)
-         (sort-by read-order)
-         (keep #(shortest-path (spaces-containing state #{:empty}) coord %))
-         (sort-by count)
-         first)))
+  (p :path-to (if (or (nil? (state coord)) (= [:empty] (state coord)))
+                (throw (ex-info "Can't be called on an empty square" {:state state :coord coord}))
+                (->> (attack-squares state coord)
+                     (sort-by read-order)
+                     (keep #(shortest-path-wrap (spaces-containing state #{:empty}) coord %))
+                     (sort-by count)
+                     first))))
 
 ;; level 3 moving
 
@@ -312,11 +317,11 @@
     state))
 
 (defn- turn [state coord]
-  (if (= [:empty] (state coord))
-    state
-    (if-let [target (pick-target state coord)]
-      (attack state target)
-      (move-and-attack state coord))))
+  (p :turn (if (= [:empty] (state coord))
+             state
+             (if-let [target (pick-target state coord)]
+               (attack state target)
+               (move-and-attack state coord)))))
 
 (defn- round [state]
   (reduce turn state (turn-order state)))
@@ -336,6 +341,13 @@
 (play (parse-input "#######\n#.G...#\n#...EG#\n#.#.#G#\n#..G#E#\n#.....#\n#######") 0)
 (print-grid (last (take 48 (iterate round (parse-input "#######\n#.G...#\n#...EG#\n#.#.#G#\n#..G#E#\n#.....#\n#######")))))
 (print-grid (last (take 38 (iterate round (parse-input "#######\n#G..#E#\n#E#E.E#\n#G.##.#\n#...#E#\n#...E.#\n#######")))))
+
+(time (println (turn (parse-input (slurp "resources/day15input")) [12 4])))
+
+(profile
+ {}
+ (turn (parse-input (slurp "resources/day15input")) [12 4]))
+
 (comment
   (play (parse-input (slurp "resources/day15input")) 0)
 

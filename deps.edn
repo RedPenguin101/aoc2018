@@ -2,7 +2,8 @@
  :deps {org.clojure/clojure {:mvn/version "1.10.1"}
         org.clojure/math.combinatorics {:mvn/version "0.1.6"}
         tick/tick {:mvn/version "0.4.24-alpha"}
-        ubergraph/ubergraph {:mvn/version "0.8.2"}}
+        ubergraph/ubergraph {:mvn/version "0.8.2"}
+        com.taoensso/tufte {:mvn/version "2.2.0"}}
  :aliases
  {:test {:extra-paths ["test"]
          :extra-deps {org.clojure/test.check {:mvn/version "1.1.0"}}}

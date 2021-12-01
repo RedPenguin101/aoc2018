@@ -30,7 +30,6 @@
                                       :left :up
                                       :right :down}})
 
-(def ex (slurp "resources/day13example"))
 
 (defn parse-row [y row]
   (vec (keep-indexed (fn [x sym] (when (not (#{\- \| \space} sym)) [[x y] sym])) row)))
@@ -46,11 +45,11 @@
                            :next-intersection :turn-left})))
 
 (comment ;;parsings
-  (def exp (parse (str/split-lines ex)))
+  (def exp (parse (str/split-lines (slurp "resources/day13example"))))
 
   (let [{:keys [track carts]} (reduce track-and-carts {} exp)]
-    (def track (into {} track))
-    (def carts carts))
+    (def track-ex (into {} track))
+    (def carts-ex carts))
 
 
   (let [{:keys [track carts]} (reduce track-and-carts {} (parse (get-input 13)))]
@@ -95,7 +94,7 @@
 
 (defn collision? [carts]
   (let [freqs (frequencies (map :pos carts))]
-    (when (some #{2} (vals freqs))
+    (when (some (#{2}) (vals freqs))
       freqs)))
 
 (defn tick [track moved unmoved]
@@ -140,4 +139,46 @@
                               {:pos [10 4]
                                :dir :right
                                :next-intersection :go-straight}]))
+  1)
+
+"There isn't much you can do to prevent crashes in this ridiculous system. However, by 
+ predicting the crashes, the Elves know where to be in advance and instantly remove the two 
+ crashing carts the moment any crash occurs.
+ 
+ figure out where the last cart that hasn't crashed will end up."
+
+"Run tick, but instead of returning the collision, remove the carts that have collided"
+
+(defn remove-collisions [carts]
+  (vals (reduce (fn [A cart]
+                  (let [cart-pos (:pos cart)]
+                    (if (A cart-pos)
+                      (dissoc A cart-pos A)
+                      (assoc A cart-pos cart))))
+                {}
+                carts)))
+
+(defn tick2 [track moved unmoved]
+  (cond (empty? unmoved) moved
+        :else (recur track
+                     (remove-collisions (conj moved (move track (first unmoved))))
+                     (rest unmoved))))
+
+(defn run2 [track carts it]
+  #_(when (zero? (mod it 1000))
+      (tap> [it (count carts) carts]))
+  (let [new-carts (tick2 track [] (sort-carts carts))]
+    (cond (> it 100000) :break
+          (= it 35764) [it new-carts]
+          (<= (count new-carts) 1) [it new-carts]
+          :else (recur track new-carts (inc it)))))
+
+(comment
+  (let [exp (parse (str/split-lines (slurp "resources/day13example2")))
+        {:keys [track carts]} (reduce track-and-carts {} exp)]
+    (def track-ex2 (into {} track))
+    (def carts-ex2 carts))
+
+  (run2 track-ex2 carts-ex2 0)
+  (run2 track carts 0)
   1)
